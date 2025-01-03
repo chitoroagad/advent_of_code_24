@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-
 fn main() {
     let inp = include_str!("../../input1.txt");
     let out = part1(inp);
@@ -8,14 +7,17 @@ fn main() {
 
 fn part1(s: &str) -> usize {
     let mut total = 0;
+    let data = String::from(s);
     create_dict(s);
     total
 }
 
-fn create_dict(s: &str) -> HashMap<u32, HashSet<u32>> {
+fn create_dict(s: &str) -> (usize, HashMap<u32, HashSet<u32>>) {
     let mut map: HashMap<u32, HashSet<u32>> = HashMap::new();
-    for line in s.lines() {
+    let mut mid = 0;
+    for (i, line) in s.lines().enumerate() {
         if line.is_empty() {
+            mid = i;
             break;
         }
         let vals: Vec<u32> = line
@@ -26,7 +28,8 @@ fn create_dict(s: &str) -> HashMap<u32, HashSet<u32>> {
         let set = map.entry(r).or_default();
         set.insert(l);
     }
-    map
+    dbg!(&map);
+    (mid, map)
 }
 
 #[cfg(test)]
