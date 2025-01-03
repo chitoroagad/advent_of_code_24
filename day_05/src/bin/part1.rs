@@ -1,35 +1,108 @@
-use std::collections::{HashMap, HashSet};
+use std::{cmp::Ordering, collections::HashMap};
+
+#[derive(Debug, PartialEq, Eq)]
+enum OrderRules {
+    Before,
+    After,
+    Idk,
+}
+
 fn main() {
     let inp = include_str!("../../input1.txt");
     let out = part1(inp);
     println!("out: {out}")
 }
 
-fn part1(s: &str) -> usize {
-    let mut total = 0;
-    let data = String::from(s);
-    create_dict(s);
-    total
+fn part1(data: &str) -> i32 {
+    let first: Vec<&str> = data.split("\n\n").collect();
+    let rules = parse_rules(first[0]);
+    let mut mid = 0;
+    for line in first[1].lines() {
+        let print = parse_print(line);
+        if check_print(&print, &rules) {
+            mid += get_mid(line);
+        }
+    }
+    mid
 }
 
-fn create_dict(s: &str) -> (usize, HashMap<u32, HashSet<u32>>) {
-    let mut map: HashMap<u32, HashSet<u32>> = HashMap::new();
-    let mut mid = 0;
-    for (i, line) in s.lines().enumerate() {
-        if line.is_empty() {
-            mid = i;
-            break;
-        }
-        let vals: Vec<u32> = line
-            .split("|")
-            .map(|st| st.parse::<u32>().unwrap())
-            .collect();
-        let (l, r) = (vals[0], vals[1]);
-        let set = map.entry(r).or_default();
-        set.insert(l);
+fn parse_rules(data: &str) -> HashMap<i32, HashMap<i32, OrderRules>> {
+    let mut rules: HashMap<i32, HashMap<i32, OrderRules>> = HashMap::new();
+    for line in data.lines() {
+        let split: Vec<&str> = line.split('|').collect();
+        let first = split[0].parse().unwrap();
+        let last = split[1].parse().unwrap();
+
+        rules
+            .entry(first)
+            .or_default()
+            .insert(last, OrderRules::After);
+        rules
+            .entry(last)
+            .or_default()
+            .insert(first, OrderRules::Before);
     }
-    dbg!(&map);
-    (mid, map)
+    rules
+}
+
+fn parse_print(data: &str) -> HashMap<i32, HashMap<i32, OrderRules>> {
+    let mut local_map: HashMap<i32, HashMap<i32, OrderRules>> = HashMap::new();
+    let nums = parse_to_nums(data);
+
+    for (curr_idx, num) in nums.iter().enumerate() {
+        for (other_idx, _) in nums.iter().enumerate() {
+            match curr_idx.cmp(&other_idx) {
+                Ordering::Less => {
+                    local_map
+                        .entry(*num)
+                        .or_default()
+                        .insert(nums[other_idx], OrderRules::After);
+                }
+                Ordering::Equal => {
+                    continue;
+                }
+                Ordering::Greater => {
+                    local_map
+                        .entry(*num)
+                        .or_default()
+                        .insert(nums[other_idx], OrderRules::Before);
+                }
+            }
+        }
+    }
+
+    local_map
+}
+
+fn parse_to_nums(data: &str) -> Vec<i32> {
+    data.split(',')
+        .map(|num| -> i32 { num.parse().unwrap() })
+        .collect()
+}
+
+fn get_mid(data: &str) -> i32 {
+    let nums = parse_to_nums(data);
+    nums[(nums.len() - 1) / 2]
+}
+
+fn check_print(
+    print: &HashMap<i32, HashMap<i32, OrderRules>>,
+    rules: &HashMap<i32, HashMap<i32, OrderRules>>,
+) -> bool {
+    let empty: HashMap<i32, OrderRules> = HashMap::new();
+    for (num, rule) in print.iter() {
+        for (other_idx, order) in rule.iter() {
+            let curr_order = rules
+                .get(num)
+                .unwrap_or(&empty)
+                .get(other_idx)
+                .unwrap_or(&OrderRules::Idk);
+            if curr_order != &OrderRules::Idk && curr_order != order {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 #[cfg(test)]
